@@ -1,0 +1,19 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "Azure Functions backend for Worklog App",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests yet...\""
+  },
+  "dependencies": {
+    "@azure/identity": "^4.0.0",
+    "@microsoft/microsoft-graph-client": "^3.0.7",
+    "exceljs": "^4.4.0",
+    "isomorphic-fetch": "^3.0.0",
+    "stream": "^0.0.2"
+  },
+  "devDependencies": {
+    "azure-functions-core-tools": "^4.x"
+  }
+}

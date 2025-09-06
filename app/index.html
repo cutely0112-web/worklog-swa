@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <base target="_top">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>근무일지 제출 (Azure Ver.)</title>
+  <style>
+    :root {
+      --gap: 16px;
+      --radius: 12px;
+      --font: 18px;
+      --label: 1.05rem;
+      --input: 1.10rem;
+      --btn: 1.15rem;
+      --maxw: 720px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      font-size: var(--font);
+      line-height: 1.6;
+      color: #111;
+      background: #fafafa;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+    .wrap {
+      width: 100%;
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+    h1 {
+      font-size: 1.8rem;
+      text-align: center;
+      margin-bottom: 2rem;
+      color: #0078D4;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--gap);
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      font-size: var(--label);
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+    }
+    input, select {
+      width: 100%;
+      padding: 12px;
+      font-size: var(--input);
+      border-radius: var(--radius);
+      border: 1px solid #ccc;
+      background: #fff;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #0078D4;
+      box-shadow: 0 0 0 3px rgba(0, 120, 212, 0.3);
+    }
+    #note {
+      height: 100px;
+      resize: vertical;
+    }
+    #signature-pad {
+      border: 1px solid #ccc;
+      border-radius: var(--radius);
+      background: #fff;
+      cursor: crosshair;
+    }
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .btn {
+      flex: 1;
+      padding: 14px;
+      font-size: var(--btn);
+      font-weight: 700;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background-color .2s, transform .1s;
+    }
+    .btn:active {
+      transform: translateY(1px);
+    }
+    .btn-submit {
+      background: #0078D4;
+      color: #fff;
+    }
+    .btn-submit:hover { background: #005a9e; }
+    .btn-clear {
+      background: #e0e0e0;
+      color: #333;
+    }
+    .btn-clear:hover { background: #c7c7c7; }
+    .loader {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.8);
+      z-index: 9999;
+    }
+    .loader-inner {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .spinner {
+      border: 8px solid #f3f3f3;
+      border-top: 8px solid #0078D4;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+    .loader p { font-size: 1.1rem; color: #333; margin-top: 1rem; }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <h1>가드신호 근무일지</h1>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="worker">근무자</label>
+        <select id="worker"></select>
+      </div>
+      <div class="form-group">
+        <label for="site">근무처</label>
+        <select id="site"></select>
+      </div>
+      <div class="form-group">
+        <label for="manager">현장담당자</label>
+        <select id="manager"></select>
+      </div>
+      <div class="form-group">
+        <label for="date">근무일자</label>
+        <input type="date" id="date">
+      </div>
+      <div class="form-group">
+        <label for="timeDay">주간 근무시간</label>
+        <input type="text" id="timeDay" placeholder="예: 09:00~18:00">
+      </div>
+      <div class="form-group">
+        <label for="timeNight">야간 근무시간</label>
+        <input type="text" id="timeNight" placeholder="예: 21:00~06:00">
+      </div>
+      <div class="form-group">
+        <label for="signCar">싸인카 사용</label>
+        <input type="text" id="signCar" placeholder="예: 1대, 미사용 등">
+      </div>
+      <div class="form-group">
+        <label for="note">비고</label>
+        <textarea id="note"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="signature-pad">서명</label>
+        <canvas id="signature-pad" width="400" height="200"></canvas>
+        <div class="btn-group">
+          <button class="btn btn-clear" onclick="clearSignature()">다시 그리기</button>
+        </div>
+      </div>
+    </div>
+    <div class="btn-group" style="margin-top: 2rem;">
+        <button class="btn btn-submit" onclick="onSubmit()">제출하기</button>
+    </div>
+  </div>
+
+  <div class="loader" id="loader">
+      <div class="loader-inner">
+          <div class="spinner"></div>
+          <p>근무일지를 생성 중입니다...</p>
+      </div>
+  </div>
+
+
+  <!-- Signature Pad JS by szimek - https://github.com/szimek/signature_pad -->
+  <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+
+  <script>
+    let signaturePad;
+    
+    // ---------- 로딩 및 초기화 ---------- //
+    
+    // 드롭다운 메뉴 데이터 로딩
+    async function loadDropdowns() {
+      try {
+        // Azure Function API 호출
+        const response = await fetch('/api/get-dropdown-data');
+        if (!response.ok) {
+          throw new Error(`서버 오류: ${response.statusText}`);
+        }
+        const data = await response.json();
+        
+        populateSelect('worker', data.workers);
+        populateSelect('site', data.sites);
+        populateSelect('manager', data.managers);
+
+      } catch (error) {
+        console.error('드롭다운 데이터 로딩 실패:', error);
+        alert('데이터를 불러오는 데 실패했습니다. 페이지를 새로고침 해주세요.');
+      }
+    }
+
+    // select 엘리먼트에 option 추가
+    function populateSelect(elementId, items) {
+      const select = document.getElementById(elementId);
+      select.innerHTML = '<option value="">-- 선택 --</option>'; // 기본 옵션
+      if (items) {
+        items.forEach(item => {
+          if (item) { // 빈 값은 제외
+            const option = document.createElement('option');
+            option.value = item;
+            option.textContent = item;
+            select.appendChild(option);
+          }
+        });
+      }
+    }
+
+    // 오늘 날짜 기본값 설정
+    function setDefaultDate() {
+      const dateInput = document.getElementById('date');
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+
+    // 서명 패드 초기화
+    function initSignatureCanvas() {
+      const canvas = document.getElementById('signature-pad');
+      signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'rgb(255, 255, 255)'
+      });
+      resizeSignatureCanvas();
+    }
+
+    // 서명 패드 캔버스 크기 조절
+    function resizeSignatureCanvas() {
+      if (!signaturePad) return;
+      const canvas = signaturePad.canvas;
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      canvas.width = canvas.offsetWidth * ratio;
+      canvas.height = canvas.offsetHeight * ratio;
+      canvas.getContext("2d").scale(ratio, ratio);
+      signaturePad.clear(); // 크기 조절 후 내용 지우기
+    }
+    
+    // 서명 지우기
+    function clearSignature() {
+      signaturePad.clear();
+    }
+    
+    // 서명 데이터 URL 가져오기
+    function getSignatureDataURL() {
+      if (signaturePad.isEmpty()) {
+        return null;
+      }
+      // PNG 형식, 배경 포함하여 데이터 URL 생성
+      return signaturePad.toDataURL('image/png');
+    }
+
+    // 페이지 로드 시 실행
+    window.addEventListener('load', () => {
+      loadDropdowns();
+      setDefaultDate();
+      initSignatureCanvas();
+    });
+
+    // 창 크기 변경 시 실행
+    window.addEventListener('resize', resizeSignatureCanvas);
+
+    // ---------- 제출 ---------- //
+    
+    async function onSubmit() {
+      const signature = getSignatureDataURL();
+
+      const data = {
+        worker: document.getElementById('worker').value,
+        site: document.getElementById('site').value,
+        manager: document.getElementById('manager').value,
+        date: document.getElementById('date').value,
+        timeDay: document.getElementById('timeDay').value,
+        timeNight: document.getElementById('timeNight').value,
+        signCar: document.getElementById('signCar').value,
+        note: document.getElementById('note').value,
+        signature: signature
+      };
+
+      // 유효성 검사
+      if (!data.worker) return alert('근무자를 선택해 주세요.');
+      if (!data.site) return alert('근무처를 선택해 주세요.');
+      if (!data.manager) return alert('현장담당자를 선택해 주세요.');
+      if (!data.date) return alert('근무일자를 입력해 주세요.');
+      if (!data.signature) return alert('서명을 입력해 주세요.');
+
+      const loader = document.getElementById('loader');
+      try {
+        loader.style.display = 'block';
+
+        // Azure Function API 호출
+        const response = await fetch('/api/submit-worklog', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          alert('근무일지 제출에 성공했습니다!');
+          console.log('PDF 경로:', result.pdfPath);
+          window.location.reload(); // 성공 시 페이지 새로고침
+        } else {
+          const errorResult = await response.json();
+          throw new Error(errorResult.error || '제출에 실패했습니다.');
+        }
+
+      } catch (error) {
+        console.error('제출 실패:', error);
+        alert(`오류가 발생했습니다: ${error.message}`);
+      } finally {
+        loader.style.display = 'none';
+      }
+    }
+  </script>
+</body>
+</html>
