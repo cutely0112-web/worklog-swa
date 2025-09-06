@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <base target="_top">
+  <meta charset="utf-8" />
+  <!-- 모바일 화면 폭에 맞춰 1:1 스케일 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+  <title>근무일지 제출</title>
+
+  <style>
+    :root{
+      --gap: 16px;
+      --radius: 12px;
+      / 글자/컨트롤 크기 상향 (모바일 가독성↑) /
+      --font: 18px;    / 기본 본문 /
+      --label: 1.05rem;
+      --input: 1.10rem;
+      --btn: 1.15rem;
+      --maxw: 720px;   / 태블릿까지 보기 좋게 /
+    }
+
+    *{ box-sizing: border-box; }
+    html, body { height: 100%; }
+    body{
+      margin:0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", Arial, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+      font-size: var(--font);
+      line-height: 1.6;
+      color:#111;
+      background:#fafafa;
+    }
+
+    .wrap{
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    / 작은 화면에서는 여백을 조금 더 줄여 꽉 차는 느낌 /
+    @media (max-width: 480px){
+      .wrap{ padding: 16px 12px 28px; }
+    }
+
+    h2{
+      margin: 0 0 16px;
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+    }
+
+    .card{
+      background:#fff;
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+    }
+
+    .grid{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--gap);
+    }
+
+    / 큰 화면(태블릿 이상)에서는 2열 /
+    @media (min-width: 640px){
+      .grid{ grid-template-columns: 1fr 1fr; }
+    }
+
+    label{
+      display:block;
+      font-size: var(--label);
+      color:#333;
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .field{
+      display:flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    select, input[type="date"], input[type="number"], textarea{
+      width: 100%;
+      font-size: var(--input);
+      padding: 16px 14px; / 터치 타깃 확대 /
+      border: 1px solid #ddd;
+      border-radius: var(--radius);
+      background: #fff;
+      outline: none;
+      transition: box-shadow .15s ease, border-color .15s ease;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    select:focus, input:focus, textarea:focus{
+      border-color:#7aa7ff;
+      box-shadow: 0 0 0 3px rgba(61, 115, 255, 0.2);
+    }
+
+    textarea{
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .muted{ color:#777; font-size: .95rem; }
+
+    .sig-wrap{
+      margin-top: 10px;
+    }
+    .sig-head{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px;
+    }
+    .sig-title{ font-weight:800; }
+
+    / 캔버스는 CSS 크기로 반응형, 내부 픽셀은 JS에서 DPR에 맞게 스케일 /
+    #sig{
+      display:block;
+      width: 100%;
+      max-width: 100%;
+      height: 200px;            / 높이 조금 키움 /
+      border:1px solid #ccc;
+      border-radius: 10px;
+      background:#fff;
+      touch-action: none;       / 터치 스크롤 대신 필기 /
+    }
+
+    .row-btns{
+      display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;
+    }
+
+    .btn{
+      appearance: none;
+      border: none;
+      border-radius: 999px;
+      padding: 14px 20px;       / 버튼 터치 타깃 확대 /
+      font-size: var(--btn);
+      font-weight: 700;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .05s ease, box-shadow .15s ease;
+    }
+    .btn:active{ transform: scale(.985); }
+
+    .btn-secondary{
+      background:#f0f1f3;
+      color:#222;
+      box-shadow: 0 1px 0 rgba(0,0,0,.04) inset;
+    }
+    .btn-primary{
+      background:#3d73ff;
+      color:#fff;
+      box-shadow: 0 8px 18px rgba(61,115,255,.25);
+      width: 100%;
+    }
+
+    / 여백 /
+    .spacer{ height: 16px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2>근무일지 제출</h2>
+
+    <div class="card">
+      <div class="grid">
+        <div>
+          <div class="field">
+            <label for="worker">근무자</label>
+            <select id="worker"></select>
+          </div>
+
+          <div class="field">
+            <label for="site">근무처</label>
+            <select id="site"></select>
+          </div>
+
+          <div class="field">
+            <label for="manager">현장담당자</label>
+            <select id="manager" disabled>
+              <option value="">-- 근무처 먼저 선택 --</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <div class="field">
+            <label for="date">근무일자</label>
+            <input type="date" id="date" />
+          </div>
+
+          <div class="field">
+            <label for="timeDay">주간 근무시간(시간)</label>
+            <input type="number" id="timeDay" min="0" step="0.5" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="timeNight">야간 근무시간(시간)</label>
+            <input type="number" id="timeNight" min="0" step="0.5" value="0" />
+          </div>
+
+          <div class="field">
+            <label for="signCar">사인카 대수 <span class="muted">(사용 안 하면 비워두세요)</span></label>
+            <input type="number" id="signCar" min="0" step="1" placeholder="0" />
+          </div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="field">
+        <label for="note">비고</label>
+        <textarea id="note" rows="3" placeholder="특이사항"></textarea>
+      </div>
+
+      <div class="spacer"></div>
+
+      <!-- 자필 서명 -->
+      <div class="sig-wrap">
+        <div class="sig-head">
+          <div class="sig-title">자필 서명</div>
+          <div class="muted">마우스/터치로 입력</div>
+        </div>
+        <canvas id="sig"></canvas>
+        <div class="row-btns">
+          <button type="button" class="btn btn-secondary" onclick="clearSig()">서명 지우기</button>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <button class="btn btn-primary" onclick="onSubmit()">제출</button>
+    </div>
+  </div>
+
+  <script>
+    /---------- 드롭다운 데이터 로딩 ----------/
+    let SITE_TO_MANAGERS = {};
+    let SITES = [];
+
+    function loadDropdowns() {
+      google.script.run
+        .withSuccessHandler(function(data) {
+          // 근무자
+          const workerSel = document.getElementById('worker');
+          workerSel.innerHTML = '<option value="">-- 근무자 선택 --</option>';
+          (data.workers || []).forEach(w => {
+            const opt = document.createElement('option');
+            opt.value = w; opt.textContent = w;
+            workerSel.appendChild(opt);
+          });
+
+          // 근무처
+          const siteSel = document.getElementById('site');
+          siteSel.innerHTML = '<option value="">-- 근무처 선택 --</option>';
+          (data.sites || []).forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s; opt.textContent = s;
+            siteSel.appendChild(opt);
+          });
+
+          SITE_TO_MANAGERS = data.siteToManagers || {};
+          SITES = data.sites || [];
+
+          // 근무처 변경 → 담당자 필터링
+          siteSel.addEventListener('change', () => {
+            const curSite = siteSel.value;
+            const managerSel = document.getElementById('manager');
+            managerSel.innerHTML = '';
+            if (!curSite || !SITE_TO_MANAGERS[curSite] || SITE_TO_MANAGERS[curSite].length === 0) {
+              managerSel.disabled = true;
+              const opt = document.createElement('option');
+              opt.value = '';
+              opt.textContent = curSite ? '(담당자 없음)' : '-- 근무처 먼저 선택 --';
+              managerSel.appendChild(opt);
+              return;
+            }
+            managerSel.disabled = false;
+            const first = document.createElement('option');
+            first.value = '';
+            first.textContent = '-- 담당자 선택 --';
+            managerSel.appendChild(first);
+
+            SITE_TO_MANAGERS[curSite].forEach(name => {
+              const opt = document.createElement('option');
+              opt.value = name; opt.textContent = name;
+              managerSel.appendChild(opt);
+            });
+          });
+        })
+        .withFailureHandler(function(err){
+          console.error('getDropdownData 실패:', err);
+          alert('드롭다운 데이터 로딩 오류: ' + (err && err.message || err));
+        })
+        .getDropdownData();
+    }
+
+    /---------- 서명 캔버스: 고해상도(레티나) 스케일 + 터치/마우스 ----------/
+    let canvas, ctx;
+    let drawing = false;
+    let hasDrawn = false;
+
+    function ensureCanvas() {
+      const cvs = document.getElementById('sig');
+      if (!cvs) throw new Error('signature canvas not found');
+      const context = cvs.getContext && cvs.getContext('2d');
+      if (!context) throw new Error('2D context not available');
+      return { cvs, context };
+    }
+
+    // CSS 크기에 맞춰 내부 픽셀 크기를 DPR에 맞게 스케일
+    function resizeSignatureCanvas() {
+      if (!canvas || !ctx) return;
+      try {
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width  = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#111';
+      } catch (e) {
+        console.warn('[resizeSignatureCanvas]', e.message);
+      }
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      if (e.touches && e.touches[0]) {
+        return {
+          x: e.touches[0].clientX - rect.left,
+          y: e.touches[0].clientY - rect.top
+        };
+      } else {
+        const x = (typeof e.offsetX === 'number') ? e.offsetX : (e.clientX - rect.left);
+        const y = (typeof e.offsetY === 'number') ? e.offsetY : (e.clientY - rect.top);
+        return { x, y };
+      }
+    }
+
+    function start(e) {
+      if (!ctx) return;
+      drawing = true;
+      hasDrawn = true;
+      const { x, y } = getPos(e);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      e.preventDefault();
+    }
+
+    function move(e) {
+      if (!drawing || !ctx) return;
+      const { x, y } = getPos(e);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      e.preventDefault();
+    }
+
+    function end() {
+      if (!ctx) return;
+      drawing = false;
+      ctx.beginPath();
+    }
+
+    function clearSig() {
+      if (!canvas || !ctx) return;
+      const rect = canvas.getBoundingClientRect();
+      ctx.clearRect(0, 0, rect.width, rect.height);
+      hasDrawn = false;
+    }
+
+    function getSignatureDataURL() {
+      return (canvas && hasDrawn) ? canvas.toDataURL('image/png') : '';
+    }
+
+    function bindSigEvents() {
+      if (!canvas) return;
+      canvas.addEventListener('mousedown', start);
+      canvas.addEventListener('mousemove', move);
+      canvas.addEventListener('mouseup', end);
+      canvas.addEventListener('mouseleave', end);
+
+      canvas.addEventListener('touchstart', start, { passive:false });
+      canvas.addEventListener('touchmove', move, { passive:false });
+      canvas.addEventListener('touchend', end);
+    }
+
+    function safeInitSignatureCanvas() {
+      try {
+        const got = ensureCanvas();
+        canvas = got.cvs;
+        ctx = got.context;
+        resizeSignatureCanvas();
+        bindSigEvents();
+      } catch (e) {
+        console.warn('[signature init skipped]', e.message);
+        // 서명 기능만 비활성화, 나머지 로딩은 계속 진행
+      }
+    }
+
+    // 초기/리사이즈
+    window.addEventListener('load', () => {
+      //  드롭다운 먼저 로딩 (서명 오류여도 셀렉트는 뜨게)
+      loadDropdowns();
+      //  서명은 별도 가드로 초기화
+      safeInitSignatureCanvas();
+    });
+
+    window.addEventListener('resize', () => {
+      resizeSignatureCanvas();
+    });
+
+    / ---------- 제출 ---------- /
+    function onSubmit() {
+      const data = {
+        worker:    document.getElementById('worker').value,
+        site:      document.getElementById('site').value,
+        manager:   document.getElementById('manager').value,
+        date:      document.getElementById('date').value,
+        timeDay:   document.getElementById('timeDay').value,
+        timeNight: document.getElementById('timeNight').value,
+        signCar:   document.getElementById('signCar').value,
+        note:      document.getElementById('note').value,
+        signature: getSignatureDataURL()
+      };
+
+      // 간단 유효성 검사
+      if (!data.worker)  return alert('근무자를 선택해 주세요.');
+      if (!data.site)    return alert('근무처를 선택해 주세요.');
+      if (!data.manager) return alert('현장담당자를 선택해 주세요.');
+      if (!data.date)    return alert('근무일자를 입력해 주세요.');
+
+      google.script.run
+        .withSuccessHandler(() => alert('근무일지를 제출했습니다. (PDF 생성 및 메일 발송)'))
+        .withFailureHandler(err => alert('오류: ' + (err && err.message || err)))
+        .saveWorkLog(data);
+    }
+  </script>
+</body>
+</html>
